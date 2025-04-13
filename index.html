@@ -32,7 +32,6 @@
         #logo {
             width: 150px;
             position: absolute;
-            /* This will allow the logo to scroll with the page */
             top: 10px;
             left: 30px;
             height: auto;
@@ -48,7 +47,6 @@
             padding: 0 10px;
         }
 
-
         .machine {
             background-color: rgba(0, 0, 0, 0.75);
             color: white;
@@ -59,8 +57,6 @@
             border: 1px solid rgba(0, 0, 0, 0.2);
             font-size: 13px;
         }
-
-
 
         .machine:hover {
             transform: scale(1.02);
@@ -81,7 +77,6 @@
             font-size: 15px;
         }
 
-
         .button-group {
             display: flex;
             justify-content: center;
@@ -89,7 +84,6 @@
             margin-top: 8px;
             flex-wrap: wrap;
         }
-
 
         button {
             padding: 6px 10px;
@@ -99,7 +93,6 @@
             cursor: pointer;
             transition: 0.2s;
         }
-
 
         button:hover {
             opacity: 0.8;
@@ -126,6 +119,7 @@
             margin: 10px;
             padding: 10px;
         }
+
         select {
             padding: 5px;
             font-size: 12px;
@@ -137,44 +131,25 @@
             margin-bottom: 8px;
         }
 
-
         .timers {
             margin-top: 8px;
             font-size: 12px;
             color: #ffffff;
         }
 
-
         .timers p {
             margin: 5px 0;
         }
 
         @keyframes blinkElectrical {
-
-            0%,
-            100% {
-                background-color: #326269;
-            }
-
-            50% {
-                background-color: #1b3a3f;
-                /* darker, less transparent */
-            }
+            0%, 100% { background-color: #326269; }
+            50% { background-color: #1b3a3f; }
         }
 
         @keyframes blinkMechanical {
-
-            0%,
-            100% {
-                background-color: #947048;
-            }
-
-            50% {
-                background-color: #5e462d;
-                /* darker, less transparent */
-            }
+            0%, 100% { background-color: #947048; }
+            50% { background-color: #5e462d; }
         }
-
 
         .machine.blink-electrical {
             animation: blinkElectrical 1s step-start infinite;
@@ -184,19 +159,16 @@
             animation: blinkMechanical 1s step-start infinite;
         }
 
-
         .timers p span.blinking {
             animation: blink 1s step-start infinite;
-            /* Blink every 1 second */
         }
-
 
         /* Mobile Support */
         @media (max-width: 768px) {
             #machine-container {
                 grid-template-columns: repeat(2, 1fr);
             }
-            h1{
+            h1 {
                 padding-top: 20px;
                 font-size: 1.5em;
             }
@@ -206,7 +178,7 @@
             #machine-container {
                 grid-template-columns: 1fr;
             }
-            h1{
+            h1 {
                 margin-top: 25px;
                 font-size: 1.0em;
             }
@@ -242,7 +214,7 @@
         const machineContainer = document.getElementById('machine-container');
 
         const machineNames = [
-            "NH01", "NH06", "RBD CU", "RBD11", "SC01", "SC02", "SC03", "SKET",
+            "NH01", "NH06", "RBD_CU", "RBD11", "SC01", "SC02", "SC03", "SKET",
             "DT08", "DT09", "HAMANA", "FS03", "FS08", "FS09", "HV Sheathing", "MV01", "MV02"
         ];
 
@@ -293,7 +265,6 @@
             el.classList.remove('blink-electrical', 'blink-mechanical');
         }
 
-
         function resetTimer(id) {
             stopTimer(id);
             update(ref(db, 'machines/' + id), {
@@ -317,22 +288,22 @@
             const div = document.createElement('div');
             div.className = 'machine';
             div.id = `machine-${id}`;
-            div.innerHTML = `
-        <h3>${id}</h3>
-        <select onchange="updateStatus('${id}', this.value)">
-          <option value="None">None</option>
-          <option value="Electrical">Electrical</option>
-          <option value="Mechanical">Mechanical</option>
-        </select>
-        <div class="button-group">
-          <button class="start-btn" onclick="startTimer('${id}')">Start</button>
-          <button class="stop-btn" onclick="stopTimer('${id}')">Stop</button>
-          <button class="reset-btn" onclick="resetTimer('${id}')">Reset</button>
-        </div>
-        <div class="timers">
-          <p>Electrical Idle: <span id="electrical-${id}">00:00:00</span></p>
-          <p>Mechanical Idle: <span id="mechanical-${id}">00:00:00</span></p>
-        </div>`;
+            div.innerHTML = `        
+            <h3>${id}</h3>
+            <select onchange="updateStatus('${id}', this.value)">
+                <option value="None">None</option>
+                <option value="Electrical">Electrical</option>
+                <option value="Mechanical">Mechanical</option>
+            </select>
+            <div class="button-group">
+                <button class="start-btn" onclick="startTimer('${id}')">Start</button>
+                <button class="stop-btn" onclick="stopTimer('${id}')">Stop</button>
+                <button class="reset-btn" onclick="resetTimer('${id}')">Reset</button>
+            </div>
+            <div class="timers">
+                <p>Electrical Idle: <span id="electrical-${id}">00:00:00</span></p>
+                <p>Mechanical Idle: <span id="mechanical-${id}">00:00:00</span></p>
+            </div>`;
             machineContainer.appendChild(div);
         }
 
@@ -365,7 +336,6 @@
                 updateDisplay(name);
             });
         });
-
     </script>
 </body>
 
