@@ -120,6 +120,12 @@
             color: white;
         }
 
+        .reset-btn-all{
+            background-color: #dc3545;
+            color: white;
+            margin: 10px;
+            padding: 10px;
+        }
         select {
             padding: 5px;
             font-size: 12px;
@@ -190,80 +196,57 @@
             #machine-container {
                 grid-template-columns: repeat(2, 1fr);
             }
+            h1{
+                padding-top: 20px;
+                font-size: 1.5em;
+            }
         }
 
         @media (max-width: 480px) {
             #machine-container {
                 grid-template-columns: 1fr;
             }
+            h1{
+                margin-top: 25px;
+                font-size: 1.0em;
+            }
         }
     </style>
 </head>
 
 <body>
-
-    <!-- Jeddah Cables Company Logo -->
-    <img id="logo" src="https://jeddahcables.com/wp-content/uploads/2024/10/JCC-header-Logo.webp"
-        alt="Jeddah Cables Company Logo" />
-
+    <img id="logo" src="https://jeddahcables.com/wp-content/uploads/2024/10/JCC-header-Logo.webp" alt="Logo" />
     <h1>Machine Downtime Dashboard</h1>
-    <button id="reset-all-btn" onclick="resetAllMachines()"
-        style="margin-bottom: 20px; padding: 10px 20px; font-size: 14px; background-color: #ff4d4d; color: white; border: none; border-radius: 5px; cursor: pointer;">
-        Reset All Timers
-    </button>
+    <button id="reset-all-btn" class="reset-btn-all" onclick="resetAllMachines()">Reset All Timers</button>
     <div id="machine-container"></div>
 
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
+        import { getDatabase, ref, onValue, set, update } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-database.js";
 
-    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyC-0rSSOTjf1d_klfRUgcjpqAWA1kuBWC0",
+            authDomain: "machines-b2a4e.firebaseapp.com",
+            projectId: "machines-b2a4e",
+            storageBucket: "machines-b2a4e.appspot.com",
+            messagingSenderId: "84871116813",
+            appId: "1:84871116813:web:47d1162f322d86555e7d44",
+            measurementId: "G-JZNK7Z0ZR1",
+            databaseURL: "https://machines-b2a4e-default-rtdb.firebaseio.com/"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
         const machineContainer = document.getElementById('machine-container');
 
         const machineNames = [
-            "NH01", "NH06", "RBD CU", "RBD11",
-            "SC01", "SC02", "SC03", "SKET",
-            "DT08", "DT09", "HAMANA", "FS03",
-            "FS08", "FS09", "HV Sheathing", "MV01", "MV02"
+            "NH01", "NH06", "RBD CU", "RBD11", "SC01", "SC02", "SC03", "SKET",
+            "DT08", "DT09", "HAMANA", "FS03", "FS08", "FS09", "HV Sheathing", "MV01", "MV02"
         ];
 
-        const savedData = JSON.parse(localStorage.getItem('machines') || '[]');
-
-        const machines = machineNames.map((name, index) => {
-            const saved = savedData.find(m => m.name === name);
-            return {
-                id: index + 1,
-                name,
-                status: saved?.status || 'None',
-                electricalTime: saved?.electricalTime || 0,
-                mechanicalTime: saved?.mechanicalTime || 0,
-                timer: null
-            };
-        });
-        function resetAllMachines() {
-            machines.forEach(machine => {
-                stopTimer(machine.id);
-                machine.electricalTime = 0;
-                machine.mechanicalTime = 0;
-                machine.status = 'None';
-
-                const element = document.getElementById(`machine-${machine.id}`);
-                element.classList.remove('electrical', 'mechanical', 'blink-electrical', 'blink-mechanical');
-                element.querySelector('select').value = 'None';
-
-                updateTimerDisplay(machine.id);
-            });
-
-            localStorage.removeItem('machineTimers');
-        }
-
-
-        function saveMachinesToStorage() {
-            localStorage.setItem('machines', JSON.stringify(machines.map(m => ({
-                id: m.id,
-                name: m.name,
-                status: m.status,
-                electricalTime: m.electricalTime,
-                mechanicalTime: m.mechanicalTime
-            }))));
-        }
+        const machines = {};
 
         function formatTime(seconds) {
             const hrs = String(Math.floor(seconds / 3600)).padStart(2, '0');
@@ -272,105 +255,118 @@
             return `${hrs}:${mins}:${secs}`;
         }
 
-        function createMachineElement(machine) {
-            const div = document.createElement('div');
-            div.className = 'machine';
-            div.id = `machine-${machine.id}`;
+        function updateDisplay(id) {
+            const m = machines[id];
+            document.getElementById(`electrical-${id}`).innerText = formatTime(m.electricalTime);
+            document.getElementById(`mechanical-${id}`).innerText = formatTime(m.mechanicalTime);
 
-            div.innerHTML = `
-            <h3>${machine.name}</h3>
-            <label>Status:</label>
-            <select onchange="updateStatus(${machine.id}, this.value)">
-              <option value="None">None</option>
-              <option value="Electrical">Electrical</option>
-              <option value="Mechanical">Mechanical</option>
-            </select>
-            <div class="button-group">
-              <button class="start-btn" onclick="startTimer(${machine.id})">Start</button>
-              <button class="stop-btn" onclick="stopTimer(${machine.id})">Stop</button>
-              <button class="reset-btn" onclick="resetTimer(${machine.id})">Reset</button>
-            </div>
-            <div class="timers">
-              <p>Electrical Idle: <span id="electrical-${machine.id}">00:00:00</span></p>
-              <p>Mechanical Idle: <span id="mechanical-${machine.id}">00:00:00</span></p>
-            </div>
-          `;
+            const el = document.getElementById(`machine-${id}`);
+            el.classList.remove('electrical', 'mechanical', 'blink-electrical', 'blink-mechanical');
 
-            machineContainer.appendChild(div);
-
-            // Set dropdown to saved status
-            div.querySelector('select').value = machine.status;
+            if (m.status === 'Electrical' && m.timer) el.classList.add('electrical', 'blink-electrical');
+            if (m.status === 'Mechanical' && m.timer) el.classList.add('mechanical', 'blink-mechanical');
         }
 
         function updateStatus(id, status) {
-            const machine = machines.find(m => m.id === id);
-            machine.status = status;
-
-            const element = document.getElementById(`machine-${id}`);
-            element.classList.remove('electrical', 'mechanical', 'blink-electrical', 'blink-mechanical');
-
-            if (status === 'Electrical') {
-                element.classList.add('electrical');
-            } else if (status === 'Mechanical') {
-                element.classList.add('mechanical');
-            }
-
-            saveMachinesToStorage();
-        }
-
-        function updateTimerDisplay(id) {
-            const machine = machines.find(m => m.id === id);
-            document.getElementById(`electrical-${id}`).innerText = formatTime(machine.electricalTime);
-            document.getElementById(`mechanical-${id}`).innerText = formatTime(machine.mechanicalTime);
+            update(ref(db, 'machines/' + id), { status });
         }
 
         function startTimer(id) {
-            const machine = machines.find(m => m.id === id);
-            if (machine.status === 'None' || machine.timer) return;
-
-            const element = document.getElementById(`machine-${id}`);
-
-            machine.timer = setInterval(() => {
-                if (machine.status === 'Electrical') {
-                    machine.electricalTime++;
-                    element.classList.add('blink-electrical');
-                } else if (machine.status === 'Mechanical') {
-                    machine.mechanicalTime++;
-                    element.classList.add('blink-mechanical');
-                }
-                updateTimerDisplay(id);
-                saveMachinesToStorage();
+            const m = machines[id];
+            if (m.timer || m.status === 'None') return;
+            m.timer = setInterval(() => {
+                if (m.status === 'Electrical') m.electricalTime++;
+                if (m.status === 'Mechanical') m.mechanicalTime++;
+                update(ref(db, 'machines/' + id), {
+                    electricalTime: m.electricalTime,
+                    mechanicalTime: m.mechanicalTime
+                });
             }, 1000);
         }
 
         function stopTimer(id) {
-            const machine = machines.find(m => m.id === id);
-            clearInterval(machine.timer);
-            machine.timer = null;
+            clearInterval(machines[id].timer);
+            machines[id].timer = null;
 
-            const element = document.getElementById(`machine-${id}`);
-            element.classList.remove('blink-electrical', 'blink-mechanical');
-
-            saveMachinesToStorage();
+            // Ensure blinking class is removed when the timer is stopped
+            const el = document.getElementById(`machine-${id}`);
+            el.classList.remove('blink-electrical', 'blink-mechanical');
         }
+
 
         function resetTimer(id) {
-            const machine = machines.find(m => m.id === id);
             stopTimer(id);
-            machine.electricalTime = 0;
-            machine.mechanicalTime = 0;
-            updateTimerDisplay(id);
-            saveMachinesToStorage();
+            update(ref(db, 'machines/' + id), {
+                electricalTime: 0,
+                mechanicalTime: 0,
+                status: "None"
+            });
         }
 
-        // Initialize dashboard
-        machines.forEach(createMachineElement);
-        machines.forEach(machine => {
-            updateStatus(machine.id, machine.status);
-            updateTimerDisplay(machine.id);
-        });
-    </script>
+        function resetAllMachines() {
+            machineNames.forEach(name => {
+                update(ref(db, 'machines/' + name), {
+                    electricalTime: 0,
+                    mechanicalTime: 0,
+                    status: "None"
+                });
+            });
+        }
 
+        function createMachineCard(id) {
+            const div = document.createElement('div');
+            div.className = 'machine';
+            div.id = `machine-${id}`;
+            div.innerHTML = `
+        <h3>${id}</h3>
+        <select onchange="updateStatus('${id}', this.value)">
+          <option value="None">None</option>
+          <option value="Electrical">Electrical</option>
+          <option value="Mechanical">Mechanical</option>
+        </select>
+        <div class="button-group">
+          <button class="start-btn" onclick="startTimer('${id}')">Start</button>
+          <button class="stop-btn" onclick="stopTimer('${id}')">Stop</button>
+          <button class="reset-btn" onclick="resetTimer('${id}')">Reset</button>
+        </div>
+        <div class="timers">
+          <p>Electrical Idle: <span id="electrical-${id}">00:00:00</span></p>
+          <p>Mechanical Idle: <span id="mechanical-${id}">00:00:00</span></p>
+        </div>`;
+            machineContainer.appendChild(div);
+        }
+
+        // GLOBAL access for HTML inline handlers
+        window.updateStatus = updateStatus;
+        window.startTimer = startTimer;
+        window.stopTimer = stopTimer;
+        window.resetTimer = resetTimer;
+        window.resetAllMachines = resetAllMachines;
+
+        // Init
+        machineNames.forEach(name => {
+            machines[name] = {
+                name,
+                status: "None",
+                electricalTime: 0,
+                mechanicalTime: 0,
+                timer: null
+            };
+            createMachineCard(name);
+
+            // Realtime listener
+            onValue(ref(db, 'machines/' + name), snapshot => {
+                const data = snapshot.val();
+                if (!data) return;
+                machines[name].status = data.status || "None";
+                machines[name].electricalTime = data.electricalTime || 0;
+                machines[name].mechanicalTime = data.mechanicalTime || 0;
+                document.querySelector(`#machine-${name} select`).value = machines[name].status;
+                updateDisplay(name);
+            });
+        });
+
+    </script>
 </body>
 
 </html>
